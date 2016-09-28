@@ -72,10 +72,12 @@ namespace Pokewatch
 				Environment.Exit(3);
 			}
 
+            /*
 			if (!PrepareTwitterClient())
 				Environment.Exit(4);
 
 			PokewatchLogger.Log("[+]Sucessfully signed in to twitter.", AccountManager.GetAccountName(s_account));
+            */
 
 			s_pogoSession.Startup();
 
