@@ -14,6 +14,8 @@ using Tweetinvi;
 using Tweetinvi.Core.Extensions;
 using Tweetinvi.Models;
 using Location = PokewatchUtility.DataTypes.Location;
+using System.Net;
+using System.IO;
 
 namespace Pokewatch
 {
@@ -21,7 +23,8 @@ namespace Pokewatch
 	{
 		public static void Main(string[] args)
 		{
-			if (args.Length < 2)
+            
+            if (args.Length < 2)
 			{
 				PokewatchLogger.Log("[-]Missing Arguments. Indeces of account and regions must be specified.", "PokewatchUnknown");
 				Environment.Exit(2);
@@ -123,7 +126,7 @@ namespace Pokewatch
 				foreach (WildPokemon pokemon in mapCell.WildPokemons)
 				{
 					FoundPokemon foundPokemon = ProcessPokemon(pokemon, s_tweetedPokemon, s_lastTweet);
-
+                    
 					if (foundPokemon == null)
 						continue;
 
@@ -132,20 +135,22 @@ namespace Pokewatch
 					if (tweet == null)
 						throw new Exception();
 
-					if (Tweet.Length(tweet) > 140)
-					{
-						PokewatchLogger.Log("[-]Tweet exceeds 140 characters. Consider changing your template: " + tweet, AccountManager.GetAccountName(s_account));
-						continue;
-					}
+					//if (Tweet.Length(tweet) > 140)
+					//{
+					//	PokewatchLogger.Log("[-]Tweet exceeds 140 characters. Consider changing your template: " + tweet, AccountManager.GetAccountName(s_account));
+					//	continue;
+					//}
 					try
 					{
-						//s_twitterClient.PublishTweet(tweet);
-						PokewatchLogger.Log("[+]Tweet published: " + tweet, AccountManager.GetAccountName(s_account));
+                        //s_twitterClient.PublishTweet(tweet);
+                        string[] region = {s_currentScan.Prefix, s_currentScan.Name, s_currentScan.Suffix};
+                        sendTexts(region, foundPokemon.Kind, tweet);
+						PokewatchLogger.Log("[+]Sent text: " + tweet.Substring(0, tweet.IndexOf("http")), AccountManager.GetAccountName(s_account));
 						s_lastTweet = DateTime.Now;
 					}
 					catch (Exception ex)
 					{
-						PokewatchLogger.Log("[-]Tweet failed to publish: " + tweet + " " + ex.Message, AccountManager.GetAccountName(s_account));
+						PokewatchLogger.Log("[-]Failed to send: " + tweet + " " + ex.Message, AccountManager.GetAccountName(s_account));
 					}
 
 					s_tweetedPokemon.Enqueue(foundPokemon);
@@ -186,7 +191,7 @@ namespace Pokewatch
 
 		private static void SetLocation(Location location)
 		{
-			PokewatchLogger.Log($"[!]Setting location to {location.Latitude},{location.Longitude}", AccountManager.GetAccountName(s_account));
+			//PokewatchLogger.Log($"[!]Setting location to {location.Latitude},{location.Longitude}", AccountManager.GetAccountName(s_account));
 			s_pogoSession.Player.SetCoordinates(location.Latitude, location.Longitude);
 		}
 
@@ -224,14 +229,14 @@ namespace Pokewatch
 				return null;
 			}
 
-			PokewatchLogger.Log($"[!]Tweeting: {foundPokemon.Kind} ({foundPokemon.LifeExpectancy} seconds): {Math.Round(foundPokemon.Location.Latitude, 6)},{Math.Round(foundPokemon.Location.Longitude, 6)}", AccountManager.GetAccountName(s_account));
+			//PokewatchLogger.Log($"[!]Tweeting: {foundPokemon.Kind} ({foundPokemon.LifeExpectancy} seconds): {Math.Round(foundPokemon.Location.Latitude, 6)},{Math.Round(foundPokemon.Location.Longitude, 6)}", AccountManager.GetAccountName(s_account));
 			return foundPokemon;
 		}
 
 		//Build a tweet with useful information about the pokemon, then cram in as many hashtags as will fit.
 		private static string ComposeTweet(FoundPokemon pokemon)
 		{
-			PokewatchLogger.Log("[!]Composing Tweet.", AccountManager.GetAccountName(s_account));
+			//PokewatchLogger.Log("[!]Composing Tweet.", AccountManager.GetAccountName(s_account));
 			string latitude = pokemon.Location.Latitude.ToString(System.Globalization.CultureInfo.GetCultureInfo("en-us"));
 			string longitude = pokemon.Location.Longitude.ToString(System.Globalization.CultureInfo.GetCultureInfo("en-us"));
 			string mapsLink = s_config.Pokevision ? $"https://pokevision.com/#/@{latitude},{longitude}" : $"https://www.google.com/maps/place/{latitude},{longitude}";
@@ -271,7 +276,7 @@ namespace Pokewatch
 					tweet += " #" + hashtag.Replace(tag, "");
 			}
             */
-			PokewatchLogger.Log("[!]Sucessfully composed tweet.", AccountManager.GetAccountName(s_account));
+			//PokewatchLogger.Log("[!]Sucessfully composed tweet.", AccountManager.GetAccountName(s_account));
 			return tweet;
 		}
 
@@ -302,9 +307,25 @@ namespace Pokewatch
 				display = s_config.PokemonOverrides.First(po => po.Kind == pokemon).Display;
 			}
 			return display;
-		}
+        }
 
-		private static Configuration s_config;
+        public static void sendTexts(String[] region, PokemonId pokemon, string text) {
+            string regionName = (region[2].Contains("Campus") ? "Campus" : region[1]);
+            text = text.Replace(" (Campus)", "");
+
+            string url = "http://mtupogo.com/scripts/sms.php?region=" + regionName + "&pokemon=" + ((int) pokemon) + "&msg=" + text + "&key=" + s_config.SMSKey;
+            //PokewatchLogger.Log("[!]CALLING URL: " + url, AccountManager.GetAccountName(s_account));
+            // Create the web request  
+            HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
+
+            // Get response  
+            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse) {
+                // Get the response stream  
+                StreamReader reader = new StreamReader(response.GetResponseStream());
+            }
+        }
+
+        private static Configuration s_config;
 		private static PoGoAccount s_account;
 		private static List<Region> s_regions = new List<Region>();
 		private static IAuthenticatedUser s_twitterClient;

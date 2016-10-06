@@ -17,6 +17,7 @@ namespace PokewatchLauncher
 			PokewatchLogger.Log("[!]Initializing PokewatchLauncher...", "Launcher");
 			s_config = ConfigurationManager.ReadConfiguration("Launcher");
 			Dictionary<PoGoAccount, List<Region>> workDistribution = DistributeWork(s_config.PoGoAccounts, s_config.Regions);
+
 			foreach(PoGoAccount account in workDistribution.Keys)
 			{
 				int accountIndex = s_config.PoGoAccounts.IndexOf(account);

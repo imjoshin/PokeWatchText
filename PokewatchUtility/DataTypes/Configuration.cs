@@ -5,6 +5,9 @@ namespace PokewatchUtility.DataTypes
 {
 	public sealed class Configuration
 	{
+		//Twitter OAuth Strings
+		public string SMSKey { get; set; }
+
 		//PokemonGo Accounts
 		public List<PoGoAccount> PoGoAccounts { get; set; }
 
